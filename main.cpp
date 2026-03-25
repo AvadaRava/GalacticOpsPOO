@@ -32,7 +32,7 @@ public:
     void setDist(double d) { distFromHQ = d; }
     
     friend std::ostream& operator<<(std::ostream& os, const NavSystem& ns) {
-        os << "Poz: " << std::fixed << std::setprecision(2) << ns.distFromHQ << " u.f.";
+        os << "Poz: " << std::fixed << std::setprecision(2) << ns.distFromHQ << " km";
         return os;
     }
 };
