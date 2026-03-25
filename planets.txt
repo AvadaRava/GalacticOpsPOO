@@ -1,3 +1,6 @@
+Mercur 92
 Marte 225
 Jupiter 628
-Venus 41
+Saturn 1275
+Neptun 4300
+Pluto 5900
