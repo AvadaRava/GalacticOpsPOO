@@ -1,55 +1,161 @@
 #include <iostream>
-#include <array>
-#include "include/Example.h"
-// This also works if you do not want `include/`, but some editors might not like it
-// #include "Example.h"
+#include <fstream>
+#include <vector>
+#include <string>
+#include <cmath>
+
+// rezervor
+class FuelTank {
+private:
+    double currentFuel;
+    const double fuelDensity = 0.85; // kg/L (Exemplu de const)
+
+public:
+    FuelTank(double fuel = 0) : currentFuel(fuel) {}
+
+    double getFuel() const { return currentFuel; }
+    void addFuel(double amount) { currentFuel += amount; }
+    void consume(double amount) { currentFuel -= amount; }
+
+    friend std::ostream& operator<<(std::ostream& os, const FuelTank& ft) {
+        os << "[Combustibil: " << ft.currentFuel << " kg]";
+        return os;
+    }
+};
+
+// sist de navigatie
+class NavSystem {
+private:
+    double distFromHQ;
+public:
+    NavSystem(double d = 0) : distFromHQ(d) {}
+    double getDist() const { return distFromHQ; }
+    
+    friend std::ostream& operator<<(std::ostream& os, const NavSystem& ns) {
+        os << "Pozitie: " << ns.distFromHQ << " unitati de HQ";
+        return os;
+    }
+};
+
+// nava in sine
+class Spaceship {
+private:
+    std::string name;
+    FuelTank tank;    
+    NavSystem nav;    
+
+    double calculateRequiredFuel(double targetDist) const {
+        double relativeDist = std::abs(targetDist - nav.getDist());
+        return relativeDist * 1.5;    //  1.5 kg per unitate
+    }
+
+public:
+    Spaceship(std::string n, double fuel, double dist) 
+        : name(n), tank(fuel), nav(dist) {}
+
+    //  Constructor copiere, operator=, destructor
+    Spaceship(const Spaceship& other) 
+        : name(other.name), tank(other.tank), nav(other.nav) {
+        // std::cout << "DEBUG: Copiere nava " << name << "\n";
+    }
+
+    Spaceship& operator=(const Spaceship& other) {
+        if (this != &other) {
+            name = other.name;
+            tank = other.tank;
+            nav = other.nav;
+        }
+        return *this;
+    }
+
+    ~Spaceship() {}
+
+    // simulare misiune
+    bool performMission(const std::string& pName, double pDist) {
+        double needed = calculateRequiredFuel(pDist);
+        if (tank.getFuel() >= needed) {
+            tank.consume(needed);
+            return true;
+        }
+        return false;
+    }
+
+    // alimentare
+    void emergencyRefuel(double requiredDist) {
+        double needed = calculateRequiredFuel(requiredDist);
+        if (tank.getFuel() < needed) {
+            double amountToAdd = needed - tank.getFuel();
+            tank.addFuel(amountToAdd + 50);
+            std::cout << " > Alimentare de urgenta efectuata pentru " << name << "\n";
+        }
+    }
+
+    std::string getName() const { return name; }
+
+    friend std::ostream& operator<<(std::ostream& os, const Spaceship& s) {
+        os << "Nava: " << s.name << " | " << s.nav << " | " << s.tank;
+        return os;
+    }
+};
+
+// agentia spatiala
+class SpaceAgency {
+private:
+    std::vector<Spaceship> fleet;
+
+public:
+    // incarcare procesare
+    void initializeFleet(const std::string& filename) {
+        std::ifstream fin(filename);
+        if (!fin) { std::cerr << "Eroare la deschiderea " << filename << "\n"; return; }
+        
+        std::string name;
+        double f, d;
+        while (fin >> name >> f >> d) {
+            fleet.push_back(Spaceship(name, f, d));
+        }
+        fin.close();
+    }
+
+    void runGlobalMissionReport(const std::string& planetFile) {
+        std::ifstream fIn(planetFile);
+        if (!fIn) return;
+
+        std::string pName;
+        double pDist;
+        while (fIn >> pName >> pDist) {
+            std::cout << "\n--- Destinatie: " << pName << " (Dist: " << pDist << ") ---\n";
+            for (auto& ship : fleet) {
+                // Facem o copie temporara pentru a nu consuma combustibilul real al flotei in raport
+                Spaceship tester = ship; 
+                if (tester.performMission(pName, pDist)) {
+                    std::cout << "[OK] " << ship.getName() << " are resurse.\n";
+                } else {
+                    std::cout << "[FAIL] " << ship.getName() << " - se incearca realimentarea...\n";
+                    ship.emergencyRefuel(pDist);
+                }
+            }
+        }
+        fIn.close();
+    }
+
+    void showStatus() const {
+        std::cout << "\nSTARE FLOTA FINALA:\n";
+        for (const auto& s : fleet) std::cout << s << "\n";
+    }
+};
 
 int main() {
-    std::cout << "Hello, world!\n";
-    Example e1;
-    e1.g();
-    std::array<int, 100> v{};
-    int nr;
-    std::cout << "Introduceți nr: ";
-    /////////////////////////////////////////////////////////////////////////
-    /// Observație: dacă aveți nevoie să citiți date de intrare de la tastatură,
-    /// dați exemple de date de intrare folosind fișierul tastatura.txt
-    /// Trebuie să aveți în fișierul tastatura.txt suficiente date de intrare
-    /// (în formatul impus de voi) astfel încât execuția programului să se încheie.
-    /// De asemenea, trebuie să adăugați în acest fișier date de intrare
-    /// pentru cât mai multe ramuri de execuție.
-    /// Dorim să facem acest lucru pentru a automatiza testarea codului, fără să
-    /// mai pierdem timp de fiecare dată să introducem de la zero aceleași date de intrare.
-    ///
-    /// Pe GitHub Actions (bife), fișierul tastatura.txt este folosit
-    /// pentru a simula date introduse de la tastatură.
-    /// Bifele verifică dacă programul are erori de compilare, erori de memorie și memory leaks.
-    ///
-    /// Dacă nu puneți în tastatura.txt suficiente date de intrare, îmi rezerv dreptul să vă
-    /// testez codul cu ce date de intrare am chef și să nu pun notă dacă găsesc vreun bug.
-    /// Impun această cerință ca să învățați să faceți un demo și să arătați părțile din
-    /// program care merg (și să le evitați pe cele care nu merg).
-    ///
-    /////////////////////////////////////////////////////////////////////////
-    std::cin >> nr;
-    /////////////////////////////////////////////////////////////////////////
-    for(int i = 0; i < nr; ++i) {
-        std::cout << "v[" << i << "] = ";
-        std::cin >> v[i];
-    }
-    std::cout << "\n\n";
-    std::cout << "Am citit de la tastatură " << nr << " elemente:\n";
-    for(int i = 0; i < nr; ++i) {
-        std::cout << "- " << v[i] << "\n";
-    }
-    ///////////////////////////////////////////////////////////////////////////
-    /// Pentru date citite din fișier, NU folosiți tastatura.txt. Creați-vă voi
-    /// alt fișier propriu cu ce alt nume doriți.
-    /// Exemplu:
-    /// std::ifstream fis("date.txt");
-    /// for(int i = 0; i < nr2; ++i)
-    ///     fis >> v2[i];
-    ///
-    ///////////////////////////////////////////////////////////////////////////
+    SpaceAgency agency;
+
+    // Incarcare date
+    agency.initializeFleet("spaceships.txt");
+    
+    // Rulare scenariu complex
+    agency.runGlobalMissionReport("planets.txt");
+
+    // Afisare rezultate finale
+    agency.showStatus();
+
     return 0;
 }
