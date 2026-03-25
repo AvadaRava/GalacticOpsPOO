@@ -10,10 +10,8 @@
 class FuelTank {
 private:
     double currentFuel;
-
 public:
     explicit FuelTank(double fuel = 0) : currentFuel(fuel) {}
-
     double getFuel() const { return currentFuel; }
     void addFuel(double amount) { currentFuel += amount; }
     void consume(double amount) { currentFuel -= amount; }
@@ -45,11 +43,10 @@ private:
     std::string name;
     FuelTank tank;    
     NavSystem nav;    
-    double totalFuelConsumed; // consum total contor
+    double totalFuelConsumed;
 
     double calculateRequiredFuel(double targetDist) const {
-        double travelDist = std::abs(targetDist - nav.getDist());
-        return travelDist * 1.5; 
+        return std::abs(targetDist - nav.getDist()) * 1.5; 
     }
 
 public:
@@ -75,7 +72,7 @@ public:
         double needed = calculateRequiredFuel(pDist);
         if (tank.getFuel() >= needed) {
             tank.consume(needed);
-            totalFuelConsumed += needed; //actualizare consum tot
+            totalFuelConsumed += needed;
             nav.setDist(pDist); 
             return true;
         }
@@ -87,7 +84,7 @@ public:
         if (tank.getFuel() < needed) {
             double amountToAdd = (needed - tank.getFuel()) + 100.0;
             tank.addFuel(amountToAdd);
-            std::cout << "   > Alimentare urgenta: +" << amountToAdd << " kg pt " << name << "\n";
+            std::cout << "   > Alimentare urgenta pentru " << name << "\n";
         }
     }
 
@@ -97,13 +94,10 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const Spaceship& s) {
         os << "Nava: " << std::left << std::setw(12) << s.name 
-           << " | " << s.nav 
-           << " | " << s.tank 
-           << " | Consum Total: " << std::setw(8) << s.totalFuelConsumed << " kg";
+           << " | " << s.nav << " | " << s.tank;
         return os;
     }
 };
-
 // agentia spatiala (manager practic)
 class SpaceAgency {
 private:
@@ -127,12 +121,11 @@ public:
         std::string pName;
         double pDist;
         while (fIn >> pName >> pDist) {
-            std::cout << "\n--- Misiune: " << pName << " (Dist: " << pDist << ") ---\n";
+            std::cout << "\n--- Misiune: " << pName << " ---\n";
             for (auto& ship : fleet) {
                 if (ship.performMission(pDist)) {
-                    std::cout << "[OK] " << ship.getName() << " a ajuns.\n";
+                    std::cout << "[OK] " << ship.getName() << " a ajuns (G: " << ship.getFuelValue() << ")\n";
                 } else {
-                    std::cout << "[!]  " << ship.getName() << " necesita realimentare...\n";
                     ship.emergencyRefuel(pDist);
                     if (ship.performMission(pDist))
                         std::cout << "     [FIXED] " << ship.getName() << " a aterizat.\n";
@@ -143,11 +136,11 @@ public:
     }
 
     void showStatus() const {
-        std::cout << "\n" << std::string(90, '=') << "\n";
-        std::cout << "                 RAPORT FINAL DE ACTIVITATE GALACTICOPS\n";
-        std::cout << std::string(90, '=') << "\n";
-        for (const auto& s : fleet) std::cout << s << "\n";
-        std::cout << std::string(90, '=') << "\n";
+        std::cout << "\n" << std::string(80, '=') << "\n";
+        for (const auto& s : fleet) {
+            std::cout << s << " | Total Consumat: " << s.getTotalConsumed() << " kg\n";
+        }
+        std::cout << std::string(80, '=') << "\n";
     }
 };
 
