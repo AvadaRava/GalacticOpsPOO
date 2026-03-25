@@ -4,14 +4,12 @@
 #include <string>
 #include <cmath>
 
-// --- CLASA 1: Rezervor ---
+// rezervor
 class FuelTank {
 private:
     double currentFuel;
-    // Eliminat fuelDensity deoarece era nefolosit (unusedStructMember)
-
 public:
-    // Folosim 'explicit' pentru a evita conversiile implicite (noExplicitConstructor)
+    // Folosim 'explicit' pentru a evita conversiile implicite
     explicit FuelTank(double fuel = 0) : currentFuel(fuel) {}
 
     double getFuel() const { return currentFuel; }
@@ -24,7 +22,7 @@ public:
     }
 };
 
-// --- CLASA 2: Sistem de Navigatie ---
+//sist de navigatie
 class NavSystem {
 private:
     double distFromHQ;
@@ -39,7 +37,7 @@ public:
     }
 };
 
-// --- CLASA 3: Nava Spatiala ---
+// nava spatiala in sine
 class Spaceship {
 private:
     std::string name;
@@ -89,7 +87,7 @@ public:
         }
     }
 
-    // Returnăm prin const reference pentru performanță (returnByReference)
+    // Return prin const reference
     const std::string& getName() const { return name; }
 
     friend std::ostream& operator<<(std::ostream& os, const Spaceship& s) {
@@ -98,7 +96,7 @@ public:
     }
 };
 
-// --- CLASA 4: Agentia Spatiala ---
+// agentia spatiala
 class SpaceAgency {
 private:
     std::vector<Spaceship> fleet;
