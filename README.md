@@ -1,4 +1,4 @@
-# GalacticOps- sistem de gestiune al unei 
+# GalacticOps- sistem de gestiune al unei firme de transport intergalactic, dezvoltat in C++, care utilizeaza informatii privind navete, distante, eficienta drumurilor etc. 
 
 ### Folosiți template-ul corespunzător grupei voastre!
 
