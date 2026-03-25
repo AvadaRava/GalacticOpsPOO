@@ -1,4 +1,4 @@
-# Nu primesc notă pentru că nu am pus titlu și descriere
+# GalacticOps- sistem de gestiune al unei 
 
 ### Folosiți template-ul corespunzător grupei voastre!
 
