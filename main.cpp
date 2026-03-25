@@ -3,13 +3,14 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <utility>
 
 // rezervor
 class FuelTank {
 private:
     double currentFuel;
+
 public:
-    // Folosim 'explicit' pentru a evita conversiile implicite
     explicit FuelTank(double fuel = 0) : currentFuel(fuel) {}
 
     double getFuel() const { return currentFuel; }
@@ -17,36 +18,37 @@ public:
     void consume(double amount) { currentFuel -= amount; }
 
     friend std::ostream& operator<<(std::ostream& os, const FuelTank& ft) {
-        os << "[Combustibil: " << ft.currentFuel << " kg]";
+        os << "[Combustibil ramans: " << ft.currentFuel << " kg]";
         return os;
     }
 };
 
-//sist de navigatie
+// sist de navigatie
 class NavSystem {
 private:
     double distFromHQ;
 public:
-    // Folosim 'explicit' (noExplicitConstructor)
     explicit NavSystem(double d = 0) : distFromHQ(d) {}
     double getDist() const { return distFromHQ; }
+    void setDist(double d) { distFromHQ = d; } // Nava se mută la noua locație
     
     friend std::ostream& operator<<(std::ostream& os, const NavSystem& ns) {
-        os << "Pozitie: " << ns.distFromHQ << " unitati de HQ";
+        os << "Pozitie: " << ns.distFromHQ << " u.f. HQ";
         return os;
     }
 };
 
-// nava spatiala in sine
+//nave
 class Spaceship {
 private:
     std::string name;
     FuelTank tank;    
     NavSystem nav;    
 
+    // func pt calcul de consum
     double calculateRequiredFuel(double targetDist) const {
-        double relativeDist = std::abs(targetDist - nav.getDist());
-        return relativeDist * 1.5; 
+        double travelDist = std::abs(targetDist - nav.getDist());
+        return travelDist * 1.5; 
     }
 
 public:
@@ -68,26 +70,29 @@ public:
 
     ~Spaceship() {}
 
-    bool performMission(const std::string& pName, double pDist) {
-        (void)pName; // Evităm warning pentru parametru nefolosit în interior
+    // executarea unei misiuni
+    bool performMission(double pDist) {
         double needed = calculateRequiredFuel(pDist);
         if (tank.getFuel() >= needed) {
             tank.consume(needed);
+            nav.setDist(pDist); //!navar ramane pe o planeta dupa ce ajunge la ea
             return true;
         }
         return false;
     }
 
+    // alimentare automata bazata pe cat e nev
     void emergencyRefuel(double requiredDist) {
         double needed = calculateRequiredFuel(requiredDist);
         if (tank.getFuel() < needed) {
-            double amountToAdd = needed - tank.getFuel();
-            tank.addFuel(amountToAdd + 50); 
-            std::cout << " > Alimentare de urgenta efectuata pentru " << name << "\n";
+            double amountToAdd = (needed - tank.getFuel()) + 100.0; // Rezerva extra.
+            tank.addFuel(amountToAdd);
+            std::cout << "   > S-au alimentat " << amountToAdd << " kg pentru " << name << "\n";
         }
     }
 
-    // Return prin const reference
+    // Accessor pentru valoarea combustibilului 
+    double getFuelValue() const { return tank.getFuel(); }
     const std::string& getName() const { return name; }
 
     friend std::ostream& operator<<(std::ostream& os, const Spaceship& s) {
@@ -96,18 +101,17 @@ public:
     }
 };
 
-// agentia spatiala
+// agentia spatiala (practic manager)
 class SpaceAgency {
 private:
     std::vector<Spaceship> fleet;
 
 public:
+    // gestiunea datelor din fisiere
     void initializeFleet(const std::string& filename) {
         std::ifstream fin(filename);
-        if (!fin) { return; }
-        
-        std::string n;
-        double f, d;
+        if (!fin) return;
+        std::string n; double f, d;
         while (fin >> n >> f >> d) {
             fleet.push_back(Spaceship(n, f, d));
         }
@@ -123,12 +127,15 @@ public:
         while (fIn >> pName >> pDist) {
             std::cout << "\n--- Destinatie: " << pName << " (Dist: " << pDist << ") ---\n";
             for (auto& ship : fleet) {
-                Spaceship tester = ship; 
-                if (tester.performMission(pName, pDist)) {
-                    std::cout << "[OK] " << ship.getName() << " are resurse.\n";
+                // avem fuel sau nu
+                if (ship.performMission(pDist)) {
+                    std::cout << "[SUCCESS] " << ship.getName() << " a ajuns. Combustibil ramas: " 
+                              << ship.getFuelValue() << " kg\n";
                 } else {
-                    std::cout << "[FAIL] " << ship.getName() << " - se realimenteaza...\n";
+                    std::cout << "[RELOAD] " << ship.getName() << " nu are resurse. Se intervine...\n";
                     ship.emergencyRefuel(pDist);
+                    if (ship.performMission(pDist)) //iar dupa realimentare
+                        std::cout << "   [FIXED] " << ship.getName() << " a finalizat misiunea dupa realimentare.\n";
                 }
             }
         }
@@ -136,15 +143,22 @@ public:
     }
 
     void showStatus() const {
-        std::cout << "\nSTARE FLOTA FINALA:\n";
+        std::cout << "\n========================================\n";
+        std::cout << "STARE FINALA FLOTA (Dupa toate misiunile):\n";
         for (const auto& s : fleet) std::cout << s << "\n";
+        std::cout << "========================================\n";
     }
 };
 
 int main() {
     SpaceAgency agency;
+  //date
     agency.initializeFleet("spaceships.txt");
+    //misiune si consum
     agency.runGlobalMissionReport("planets.txt");
+
+   //stare finala
     agency.showStatus();
+
     return 0;
 }
