@@ -5,7 +5,7 @@
 #include <string>
 #include <memory>
 #include "Spaceship.h"
- 
+
 class SpaceAgency {
 private:
     std::vector<std::shared_ptr<Spaceship>> fleet;
@@ -34,6 +34,7 @@ public:
     
     void runCLI();
     void printAllData() const;
+    void printMenu() const; 
 };
 
-#endif // SPACEAGENCY_H
+#endif
