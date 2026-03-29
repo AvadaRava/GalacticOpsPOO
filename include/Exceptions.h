@@ -15,8 +15,8 @@ public:
 class OutOfFuelException : public GalacticException {
 public:
     double deficit;
-    explicit OutOfFuelException(const std::string& ship, const std::string& planet, double missingFuel)
-        : GalacticException("[CRITIC] Nava " + ship + " nu are combustibil sa ajunga pe " + planet + "!"), deficit(missingFuel) {}
+    explicit OutOfFuelException(const std::string& ship, const std::string& dest, double missingFuel)
+        : GalacticException("[CRITIC] Nava " + ship + " nu are combustibil sa ajunga la " + dest + "!"), deficit(missingFuel) {}
 };
 
 class PlanetDepletedException : public GalacticException {
@@ -35,7 +35,7 @@ class OverlappingEntityException : public GalacticException {
 public:
     explicit OverlappingEntityException(const std::string& entity, int x, int y)
         : GalacticException("[EROARE HARTA] Entitatea '" + entity + "' nu poate fi plasata la (" + 
-                            std::to_string(x) + ", " + std::to_string(y) + "). Locatia este deja ocupata!") {}
+                            std::to_string(x) + ", " + std::to_string(y) + "). Locatia este ocupata!") {}
 };
 
 #endif // EXCEPTIONS_H
