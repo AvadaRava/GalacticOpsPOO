@@ -1,6 +1,6 @@
-Mercur 92
-Marte 225
-Jupiter 628
-Saturn 1275
-Neptun 4300
-Pluto 5900
+Mercur 30 40
+Marte -100 150
+Jupiter 400 -300
+Saturn -800 -600
+Neptun 2000 3500
+Pluto -4000 5000
