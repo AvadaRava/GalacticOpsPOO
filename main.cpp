@@ -9,9 +9,7 @@
 #include <exception> // Pentru ierarhia de Excepții
 #include <algorithm>
 
-// ==========================================
-// 1. IERARHIA DE EXCEPȚII (Custom)
-// ==========================================
+
 class GalacticException : public std::exception {
 protected:
     std::string message;
@@ -32,9 +30,7 @@ public:
         : GalacticException("[INFO] Planeta " + planet + " nu mai are resurse de extras.") {}
 };
 
-// ==========================================
-// 2. COMPONENTE DE BAZĂ (Compunere)
-// ==========================================
+
 class FuelTank {
 private:
     double currentFuel;
@@ -69,9 +65,7 @@ public:
     }
 };
 
-// ==========================================
-// 3. CLASA PLANETA (Obiect cu resurse)
-// ==========================================
+
 class Planet {
 private:
     std::string name;
@@ -97,9 +91,7 @@ public:
     }
 };
 
-// ==========================================
-// 4. CLASA DE BAZĂ ABSTRACTĂ: Spaceship
-// ==========================================
+
 class Spaceship {
 protected:
     std::string name;
@@ -107,10 +99,8 @@ protected:
     NavSystem nav;    
     double totalFuelConsumed;
 
-    // Funcție virtuală de consum
     virtual double getConsumptionRate() const { return 1.5; }
 
-    // Metode pur virtuale ascunse (NVI - Non-Virtual Interface)
     virtual void performSpecificAction(Planet& targetPlanet) = 0;
     virtual void printDetails(std::ostream& os) const = 0;
 
@@ -120,35 +110,28 @@ public:
 
     virtual ~Spaceship() = default; // Destructor virtual
 
-    // --- Suprascriere cc/op= folosind COPY AND SWAP ---
     Spaceship(const Spaceship& other)
         : name(other.name), tank(other.tank), nav(other.nav), totalFuelConsumed(other.totalFuelConsumed) {}
 
-    friend void swap(Spaceship& first, Spaceship& second) noexcept {
-        using std::swap;
-        swap(first.name, second.name);
-        swap(first.tank, second.tank);
-        swap(first.nav, second.nav);
-        swap(first.totalFuelConsumed, second.totalFuelConsumed);
-    }
-
-    Spaceship& operator=(Spaceship other) {
-        swap(*this, other);
+    Spaceship& operator=(const Spaceship& other) {
+        if (this != &other) {
+            name = other.name;
+            tank = other.tank;
+            nav = other.nav;
+            totalFuelConsumed = other.totalFuelConsumed;
+        }
         return *this;
     }
 
-    // Constructor Virtual (Clone)
     virtual std::shared_ptr<Spaceship> clone() const = 0;
 
     const std::string& getName() const { return name; }
     double getTotalConsumed() const { return totalFuelConsumed; }
 
-    // --- Funcție de Nivel Înalt (NVI) care folosește EXCEPȚII ---
     void executeMission(Planet& targetPlanet) {
         double distance = nav.calculateDistanceTo(targetPlanet.getX(), targetPlanet.getY());
         double needed = distance * getConsumptionRate(); 
 
-        // ARUNCĂ EXCEPȚIE dacă nu are combustibil
         if (tank.getFuel() < needed) {
             throw OutOfFuelException(name, targetPlanet.getName());
         }
@@ -157,7 +140,6 @@ public:
         totalFuelConsumed += needed;
         nav.setPosition(targetPlanet.getX(), targetPlanet.getY());
         
-        // Apel polimorfic
         performSpecificAction(targetPlanet);
     }
 
@@ -168,9 +150,7 @@ public:
     }
 };
 
-// ==========================================
-// 5. DERIVATELE (Marfar, Explorator, Luptator)
-// ==========================================
+
 class CargoShip : public Spaceship {
 private:
     double cargoCapacity;
@@ -246,9 +226,7 @@ public:
     std::shared_ptr<Spaceship> clone() const override { return std::make_shared<FighterShip>(*this); }
 };
 
-// ==========================================
-// 6. MANAGERUL: SpaceAgency
-// ==========================================
+
 class SpaceAgency {
 private:
     std::vector<std::shared_ptr<Spaceship>> fleet; // Smart Pointers
@@ -309,7 +287,6 @@ public:
         }
     }
 
-    // UTILIZAREA CU SENS A dynamic_cast
     void performMaintenance() {
         std::cout << "\n--- UPGRADE MENTENANTA ---\n";
         for (auto& ship : fleet) {
