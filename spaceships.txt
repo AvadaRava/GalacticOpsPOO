@@ -1,7 +1,7 @@
-Falcon9 5000 100
-Starship 15000 0
-Voyager3 2000 500
-Discovery 8000 0
-Explorer 100 50
-Dreadnought 50000 1200
-Falcon-X 4500 200
+Falcon9 5000 0 0
+Starship 15000 0 0
+Voyager3 2000 100 -50
+Discovery 8000 -200 200
+Explorer 100 0 0
+Dreadnought 50000 1000 1000
+Falcon-X 4500 -50 -50
