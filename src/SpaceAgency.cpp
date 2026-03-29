@@ -94,7 +94,7 @@ void SpaceAgency::initializeUnknowns(const std::string& filename) {
 }
 
 std::shared_ptr<Spaceship> SpaceAgency::findShip(const std::string& name) {
-    for (auto& s : fleet) if (s->getName() == name) return s;
+    for (const auto& s : fleet) if (s->getName() == name) return s;
     return nullptr;
 }
 
@@ -120,7 +120,9 @@ std::vector<UnknownEntity>::iterator SpaceAgency::findUnknown(const std::string&
 void SpaceAgency::printAllData() const {
     std::cout << "\n=== DATE SISTEM ===\n";
     std::cout << "[NAVE ACTIUNE]\n";
-    for (const auto& s : fleet) std::cout << "  " << *s << " | Pwr: " << s->getPower() << "\n";
+    for (const auto& s : fleet) {
+        std::cout << "  " << *s << " | Pwr: " << s->getPower() << " | Consumat: " << s->getTotalConsumed() << " kg\n";
+    };
     
     std::cout << "\n[PLANETE]\n";
     for (const auto& p : planets) {
