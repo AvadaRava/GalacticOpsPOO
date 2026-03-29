@@ -34,7 +34,7 @@ public:
     
     void runCLI();
     void printAllData() const;
-    void printMenu() const; 
+    static void printMenu();
 };
 
 #endif
