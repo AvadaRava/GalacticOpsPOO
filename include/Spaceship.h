@@ -83,7 +83,9 @@ public:
     virtual bool isExplorer() const;
 
     void addFuel(double amount);
-    void executeMission(Planet& targetPlanet); 
+    
+    void travelTo(int targetX, int targetY);
+    void executeAction(Planet& targetPlanet);
 
     friend std::ostream& operator<<(std::ostream& os, const Spaceship& s);
 };
