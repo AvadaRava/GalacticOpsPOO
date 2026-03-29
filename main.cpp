@@ -9,6 +9,9 @@ int main() {
     agency.initializeUnknowns("unknowns.txt"); 
     
     agency.runCLI(); 
-    
+    } catch (const std::exception& e) {
+        std::cerr << "\n[CRASH SYSTEM] Eroare critica prinsa in main: " << e.what() << "\n";
+    }
+ 
     return 0;
 }
