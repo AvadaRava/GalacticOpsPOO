@@ -8,8 +8,7 @@ int main() {
     agency.initializeAliens("aliens.txt");
     agency.initializeUnknowns("unknowns.txt"); 
     
-    agency.runGlobalMissionReport(); 
-    agency.showStatus();
+    agency.runCLI(); 
     
     return 0;
 }
