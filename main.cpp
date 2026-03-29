@@ -5,8 +5,8 @@
 #include <cmath>
 #include <utility>
 #include <iomanip>
-#include <memory>    // Pentru Smart Pointers
-#include <exception> // Pentru ierarhia de Excepții
+#include <memory>    
+#include <exception> 
 #include <algorithm>
 
 
