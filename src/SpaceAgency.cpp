@@ -111,7 +111,7 @@ std::vector<UnknownEntity>::iterator SpaceAgency::findUnknown(const std::string&
     return unknowns.end();
 }
 
-void SpaceAgency::printMenu() const {
+void SpaceAgency::printMenu() { 
     std::cout << "\n========================================";
     std::cout << "\n COMENZI DISPONIBILE:";
     std::cout << "\n a) Radar: Stare Galaxie";
