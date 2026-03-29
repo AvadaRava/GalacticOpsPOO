@@ -112,7 +112,7 @@ public:
     std::shared_ptr<Spaceship> clone() const override;
     bool isExplorer() const override;
 };
-
+// COMMIT-UL SEPARAT!!
 class FighterShip : public Spaceship {
 private:
     int weaponDamage;
@@ -124,5 +124,16 @@ public:
     std::shared_ptr<Spaceship> clone() const override;
     int getPower() const override;
 };
+class ColonyShip : public Spaceship {
+private:
+    int colonistsCount;
+protected:
+    void performSpecificAction(Planet& targetPlanet) override;
+    void printDetails(std::ostream& os) const override;
+public:
+    ColonyShip(std::string n, double fuel, int x, int y, int colonists);
+    std::shared_ptr<Spaceship> clone() const override;
+}; 
+// COMMIT-UL SEPARAT!!
 
 #endif // SPACESHIP_H
