@@ -120,3 +120,23 @@ void FighterShip::performSpecificAction(Planet& targetPlanet) {
     std::cout << "   [Patrula] " << name << " asigura orbita " << targetPlanet.getName() << ".\n";
 }
 void FighterShip::printDetails(std::ostream& os) const { os << " [Luptator | DMG: " << weaponDamage << "]"; }
+
+
+
+// COMMIT SEPARAT 
+
+ColonyShip::ColonyShip(std::string n, double fuel, int x, int y, int colonists)
+    : Spaceship(std::move(n), fuel, x, y), colonistsCount(colonists) {}
+
+std::shared_ptr<Spaceship> ColonyShip::clone() const { 
+    return std::make_shared<ColonyShip>(*this); 
+}
+
+void ColonyShip::performSpecificAction(Planet& targetPlanet) {
+    std::cout << "   [Colonizare] " << name << " a stabilit o baza cu " 
+              << colonistsCount << " oameni pe " << targetPlanet.getName() << ".\n";
+}
+
+void ColonyShip::printDetails(std::ostream& os) const { 
+    os << " [Nava Colonie | Pasageri: " << colonistsCount << "]"; 
+}
