@@ -5,7 +5,7 @@
 #include <cmath>
 #include <algorithm>
 #include <random>
-
+ 
 double SpaceAgency::hqVault = 0.0; 
 int SpaceAgency::aliensKilled = 0;
 
