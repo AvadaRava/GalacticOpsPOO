@@ -2,11 +2,10 @@
 #include <fstream>
 #include <vector>
 #include <string>
-#include <cmath>
+#include <cmath> 
 #include <utility>
 #include <iomanip> 
 
-// rezervor
 class FuelTank {
 private:
     double currentFuel;
@@ -22,22 +21,26 @@ public:
     }
 };
 
-// sistem de navigatie
 class NavSystem {
 private:
-    double distFromHQ;
+    int x, y;
 public:
-    explicit NavSystem(double d = 0) : distFromHQ(d) {}
-    double getDist() const { return distFromHQ; }
-    void setDist(double d) { distFromHQ = d; }
+    explicit NavSystem(int startX = 0, int startY = 0) : x(startX), y(startY) {}
+    
+    int getX() const { return x; }
+    int getY() const { return y; }
+    void setPosition(int newX, int newY) { x = newX; y = newY; }
+    
+    double calculateDistanceTo(int targetX, int targetY) const {
+        return std::sqrt(std::pow(targetX - x, 2) + std::pow(targetY - y, 2));
+    }
     
     friend std::ostream& operator<<(std::ostream& os, const NavSystem& ns) {
-        os << "Poz: " << std::fixed << std::setprecision(2) << ns.distFromHQ << " km";
+        os << "Poz: (" << std::setw(5) << ns.x << ", " << std::setw(5) << ns.y << ")";
         return os;
     }
 };
 
-// nava spatiala
 class Spaceship {
 private:
     std::string name;
@@ -45,13 +48,13 @@ private:
     NavSystem nav;    
     double totalFuelConsumed;
 
-    double calculateRequiredFuel(double targetDist) const {
-        return std::abs(targetDist - nav.getDist()) * 1.5; 
+    double calculateRequiredFuel(int targetX, int targetY) const {
+        return nav.calculateDistanceTo(targetX, targetY) * 1.5; 
     }
 
 public:
-    Spaceship(std::string n, double fuel, double dist) 
-        : name(std::move(n)), tank(fuel), nav(dist), totalFuelConsumed(0.0) {}
+    Spaceship(std::string n, double fuel, int startX, int startY) 
+        : name(std::move(n)), tank(fuel), nav(startX, startY), totalFuelConsumed(0.0) {}
 
     Spaceship(const Spaceship& other) 
         : name(other.name), tank(other.tank), nav(other.nav), totalFuelConsumed(other.totalFuelConsumed) {}
@@ -68,19 +71,19 @@ public:
 
     ~Spaceship() {}
 
-    bool performMission(double pDist) {
-        double needed = calculateRequiredFuel(pDist);
+    bool performMission(int targetX, int targetY) {
+        double needed = calculateRequiredFuel(targetX, targetY);
         if (tank.getFuel() >= needed) {
             tank.consume(needed);
             totalFuelConsumed += needed;
-            nav.setDist(pDist); 
+            nav.setPosition(targetX, targetY); 
             return true;
         }
         return false;
     }
 
-    void emergencyRefuel(double requiredDist) {
-        double needed = calculateRequiredFuel(requiredDist);
+    void emergencyRefuel(int targetX, int targetY) {
+        double needed = calculateRequiredFuel(targetX, targetY);
         if (tank.getFuel() < needed) {
             double amountToAdd = (needed - tank.getFuel()) + 100.0;
             tank.addFuel(amountToAdd);
@@ -98,7 +101,7 @@ public:
         return os;
     }
 };
-// agentia spatiala (manager practic)
+
 class SpaceAgency {
 private:
     std::vector<Spaceship> fleet;
@@ -106,28 +109,28 @@ private:
 public:
     void initializeFleet(const std::string& filename) {
         std::ifstream fin(filename);
-        if (!fin) return;
-        std::string n; double f, d;
-        while (fin >> n >> f >> d) {
-            fleet.push_back(Spaceship(n, f, d));
+        if (!fin) { std::cerr << "Eroare la deschiderea " << filename << "\n"; return; }
+        std::string n; double f; int x, y;
+        // Citim Name, Fuel, X, Y
+        while (fin >> n >> f >> x >> y) {
+            fleet.push_back(Spaceship(n, f, x, y));
         }
         fin.close();
     }
 
     void runGlobalMissionReport(const std::string& planetFile) {
         std::ifstream fIn(planetFile);
-        if (!fIn) return;
+        if (!fIn) { std::cerr << "Eroare la deschiderea " << planetFile << "\n"; return; }
 
-        std::string pName;
-        double pDist;
-        while (fIn >> pName >> pDist) {
-            std::cout << "\n--- Misiune: " << pName << " ---\n";
+        std::string pName; int pX, pY;
+        while (fIn >> pName >> pX >> pY) {
+            std::cout << "\n--- Misiune: " << pName << " (Locatie: " << pX << ", " << pY << ") ---\n";
             for (auto& ship : fleet) {
-                if (ship.performMission(pDist)) {
+                if (ship.performMission(pX, pY)) {
                     std::cout << "[OK] " << ship.getName() << " a ajuns (G: " << ship.getFuelValue() << ")\n";
                 } else {
-                    ship.emergencyRefuel(pDist);
-                    if (ship.performMission(pDist))
+                    ship.emergencyRefuel(pX, pY);
+                    if (ship.performMission(pX, pY))
                         std::cout << "     [FIXED] " << ship.getName() << " a aterizat.\n";
                 }
             }
@@ -136,11 +139,11 @@ public:
     }
 
     void showStatus() const {
-        std::cout << "\n" << std::string(80, '=') << "\n";
+        std::cout << "\n" << std::string(85, '=') << "\n";
         for (const auto& s : fleet) {
-            std::cout << s << " | Total Consumat: " << s.getTotalConsumed() << " kg\n";
+            std::cout << s << " | Total Consumat: " << std::fixed << std::setprecision(2) << s.getTotalConsumed() << " kg\n";
         }
-        std::cout << std::string(80, '=') << "\n";
+        std::cout << std::string(85, '=') << "\n";
     }
 };
 
