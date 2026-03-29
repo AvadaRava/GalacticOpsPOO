@@ -1,4 +1,4 @@
-#include "include/SpaceAgency.h"
+#include "SpaceAgency.h"
 
 int main() {
     SpaceAgency agency;
