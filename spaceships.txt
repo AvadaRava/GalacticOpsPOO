@@ -4,3 +4,4 @@ FighterShip Falcon-X 4500 -50 -50 800
 CargoShip Discovery 6000 -200 200 10000
 ExplorerShip Pathfinder 1500 0 0
 FighterShip Dreadnought 15000 1000 1000 2500
+ColonyShip Mayflower 15000 0 0 500
