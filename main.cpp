@@ -5,9 +5,36 @@
 #include <cmath>
 #include <utility>
 #include <iomanip>
-#include <memory> // Pentru std::shared_ptr
+#include <memory>    // Pentru Smart Pointers
+#include <exception> // Pentru ierarhia de Excepții
+#include <algorithm>
 
-// --- Componente de bază ---
+// ==========================================
+// 1. IERARHIA DE EXCEPȚII (Custom)
+// ==========================================
+class GalacticException : public std::exception {
+protected:
+    std::string message;
+public:
+    explicit GalacticException(const std::string& msg) : message(msg) {}
+    const char* what() const noexcept override { return message.c_str(); }
+};
+
+class OutOfFuelException : public GalacticException {
+public:
+    explicit OutOfFuelException(const std::string& ship, const std::string& planet)
+        : GalacticException("[CRITIC] Nava " + ship + " nu are combustibil sa ajunga pe " + planet + "!") {}
+};
+
+class PlanetDepletedException : public GalacticException {
+public:
+    explicit PlanetDepletedException(const std::string& planet)
+        : GalacticException("[INFO] Planeta " + planet + " nu mai are resurse de extras.") {}
+};
+
+// ==========================================
+// 2. COMPONENTE DE BAZĂ (Compunere)
+// ==========================================
 class FuelTank {
 private:
     double currentFuel;
@@ -18,7 +45,7 @@ public:
     void consume(double amount) { currentFuel -= amount; }
 
     friend std::ostream& operator<<(std::ostream& os, const FuelTank& ft) {
-        os << "[Nivel: " << std::fixed << std::setprecision(2) << ft.currentFuel << " kg]";
+        os << "[Combustibil: " << std::fixed << std::setprecision(2) << ft.currentFuel << " kg]";
         return os;
     }
 };
@@ -43,7 +70,35 @@ public:
 };
 
 // ==========================================
-// CLASA DE BAZĂ ABSTRACTĂ: Spaceship
+// 3. CLASA PLANETA (Obiect cu resurse)
+// ==========================================
+class Planet {
+private:
+    std::string name;
+    int x, y;
+    double availableTons;
+    double pricePerTon;
+
+public:
+    Planet(std::string n, int px, int py, double tons, double price)
+        : name(std::move(n)), x(px), y(py), availableTons(tons), pricePerTon(price) {}
+
+    const std::string& getName() const { return name; }
+    int getX() const { return x; }
+    int getY() const { return y; }
+    double getAvailableTons() const { return availableTons; }
+    double getPricePerTon() const { return pricePerTon; }
+
+    double mineResources(double requestedTons) {
+        if (availableTons <= 0) return 0; // Fara resurse
+        double extracted = std::min(availableTons, requestedTons);
+        availableTons -= extracted;
+        return extracted;
+    }
+};
+
+// ==========================================
+// 4. CLASA DE BAZĂ ABSTRACTĂ: Spaceship
 // ==========================================
 class Spaceship {
 protected:
@@ -52,170 +107,170 @@ protected:
     NavSystem nav;    
     double totalFuelConsumed;
 
-    // Funcție VIRTUALĂ pentru consum. Baza returnează 1.5
+    // Funcție virtuală de consum
     virtual double getConsumptionRate() const { return 1.5; }
 
     // Metode pur virtuale ascunse (NVI - Non-Virtual Interface)
-    virtual void performSpecificAction() = 0;
+    virtual void performSpecificAction(Planet& targetPlanet) = 0;
     virtual void printDetails(std::ostream& os) const = 0;
 
 public:
     Spaceship(std::string n, double fuel, int startX, int startY) 
         : name(std::move(n)), tank(fuel), nav(startX, startY), totalFuelConsumed(0.0) {}
 
-    virtual ~Spaceship() = default; // Destructor virtual OBLIGATORIU pentru moștenire
+    virtual ~Spaceship() = default; // Destructor virtual
 
-    // Funcție virtuală de clonare (Cerință Faza 2)
+    // --- Suprascriere cc/op= folosind COPY AND SWAP ---
+    Spaceship(const Spaceship& other)
+        : name(other.name), tank(other.tank), nav(other.nav), totalFuelConsumed(other.totalFuelConsumed) {}
+
+    friend void swap(Spaceship& first, Spaceship& second) noexcept {
+        using std::swap;
+        swap(first.name, second.name);
+        swap(first.tank, second.tank);
+        swap(first.nav, second.nav);
+        swap(first.totalFuelConsumed, second.totalFuelConsumed);
+    }
+
+    Spaceship& operator=(Spaceship other) {
+        swap(*this, other);
+        return *this;
+    }
+
+    // Constructor Virtual (Clone)
     virtual std::shared_ptr<Spaceship> clone() const = 0;
 
     const std::string& getName() const { return name; }
-    double getFuelValue() const { return tank.getFuel(); }
     double getTotalConsumed() const { return totalFuelConsumed; }
 
-    // Metodă principală de nivel înalt
-    bool executeMission(int targetX, int targetY) {
-        // Polimorfism: Aici se apelează getConsumptionRate() specific fiecărei nave!
-        double distance = nav.calculateDistanceTo(targetX, targetY);
+    // --- Funcție de Nivel Înalt (NVI) care folosește EXCEPȚII ---
+    void executeMission(Planet& targetPlanet) {
+        double distance = nav.calculateDistanceTo(targetPlanet.getX(), targetPlanet.getY());
         double needed = distance * getConsumptionRate(); 
 
-        if (tank.getFuel() >= needed) {
-            tank.consume(needed);
-            totalFuelConsumed += needed;
-            nav.setPosition(targetX, targetY);
-            
-            // Apelăm acțiunea specifică navei
-            performSpecificAction();
-            return true;
-        }
-        return false;
-    }
-
-    // Realimentare de urgență adaptată la rata de consum
-    void emergencyRefuel(int targetX, int targetY) {
-        double needed = nav.calculateDistanceTo(targetX, targetY) * getConsumptionRate();
+        // ARUNCĂ EXCEPȚIE dacă nu are combustibil
         if (tank.getFuel() < needed) {
-            double amountToAdd = (needed - tank.getFuel()) + 100.0;
-            tank.addFuel(amountToAdd);
-            std::cout << "   > Alimentare urgenta: +" << amountToAdd << " kg pt " << name << "\n";
+            throw OutOfFuelException(name, targetPlanet.getName());
         }
+
+        tank.consume(needed);
+        totalFuelConsumed += needed;
+        nav.setPosition(targetPlanet.getX(), targetPlanet.getY());
+        
+        // Apel polimorfic
+        performSpecificAction(targetPlanet);
     }
 
-    // Afișare virtuală prin NVI
     friend std::ostream& operator<<(std::ostream& os, const Spaceship& s) {
         os << "Nava: " << std::left << std::setw(12) << s.name << " | " << s.nav << " | " << s.tank;
-        s.printDetails(os); // Polimorfism la afișare
+        s.printDetails(os); 
         return os;
     }
 };
 
 // ==========================================
-// DERIVATA 1: CargoShip (Nava de Marfă)
+// 5. DERIVATELE (Marfar, Explorator, Luptator)
 // ==========================================
 class CargoShip : public Spaceship {
 private:
-    int cargoCapacity;
-    int currentCargo;
+    double cargoCapacity;
+    double currentCargo;
+    double totalCreditsEarned;
 
 protected:
-    void performSpecificAction() override {
-        // Simulează încărcarea cu bunuri
-        currentCargo = cargoCapacity; 
-        std::cout << "   [Cargo] " << name << " a incarcat " << currentCargo << " tone de bunuri.\n";
+    void performSpecificAction(Planet& targetPlanet) override {
+        double availableSpace = cargoCapacity - currentCargo;
+        
+        if (targetPlanet.getAvailableTons() <= 0) {
+            throw PlanetDepletedException(targetPlanet.getName()); // Aruncă excepție
+        }
+
+        if (availableSpace > 0) {
+            double extracted = targetPlanet.mineResources(availableSpace);
+            currentCargo += extracted;
+            double profit = extracted * targetPlanet.getPricePerTon();
+            totalCreditsEarned += profit;
+
+            std::cout << "   [Minerit] " << name << " a extras " << extracted 
+                      << "t de pe " << targetPlanet.getName() << " -> Profit: $" << profit << "\n";
+        }
     }
 
     void printDetails(std::ostream& os) const override {
-        os << " [TIP: Marfar  | Cap: " << cargoCapacity << "t]";
+        os << " [Marfar | Bani: $" << totalCreditsEarned << "]";
     }
 
 public:
-    CargoShip(std::string n, double fuel, int x, int y, int capacity)
-        : Spaceship(std::move(n), fuel, x, y), cargoCapacity(capacity), currentCargo(0) {}
+    CargoShip(std::string n, double fuel, int x, int y, double capacity)
+        : Spaceship(std::move(n), fuel, x, y), cargoCapacity(capacity), currentCargo(0), totalCreditsEarned(0) {}
 
-    std::shared_ptr<Spaceship> clone() const override {
-        return std::make_shared<CargoShip>(*this);
-    }
+    std::shared_ptr<Spaceship> clone() const override { return std::make_shared<CargoShip>(*this); }
 };
 
-// ==========================================
-// DERIVATA 2: ExplorerShip (Nava de Explorare)
-// ==========================================
 class ExplorerShip : public Spaceship {
 protected:
-    // SUPRASCRIEM rata de consum: de 3 ori mai eficientă (0.5 în loc de 1.5)
-    double getConsumptionRate() const override { return 0.5; }
+    double getConsumptionRate() const override { return 0.5; } // Consum redus!
 
-    void performSpecificAction() override {
-        std::cout << "   [Explorare] " << name << " scaneaza planeta. Nu a gasit nimic ostil.\n";
+    void performSpecificAction(Planet& targetPlanet) override {
+        std::cout << "   [Explorare] " << name << " a scanat " << targetPlanet.getName() 
+                  << ". Resurse detectate: " << targetPlanet.getAvailableTons() << "t.\n";
     }
 
     void printDetails(std::ostream& os) const override {
-        os << " [TIP: Explorator | Consum: " << getConsumptionRate() << "x]";
+        os << " [Explorator | Consum: " << getConsumptionRate() << "x]";
     }
 
 public:
-    ExplorerShip(std::string n, double fuel, int x, int y)
-        : Spaceship(std::move(n), fuel, x, y) {}
-
-    std::shared_ptr<Spaceship> clone() const override {
-        return std::make_shared<ExplorerShip>(*this);
-    }
+    ExplorerShip(std::string n, double fuel, int x, int y) : Spaceship(std::move(n), fuel, x, y) {}
+    std::shared_ptr<Spaceship> clone() const override { return std::make_shared<ExplorerShip>(*this); }
 };
 
-// ==========================================
-// DERIVATA 3: FighterShip (Nava de Luptă)
-// ==========================================
 class FighterShip : public Spaceship {
 private:
     int weaponDamage;
 
 protected:
-    void performSpecificAction() override {
-        std::cout << "   [Lupta] " << name << " asigura perimetrul cu arme de calibru " << weaponDamage << " DMG.\n";
+    void performSpecificAction(Planet& targetPlanet) override {
+        std::cout << "   [Lupta] " << name << " a asigurat orbita planetei " << targetPlanet.getName() 
+                  << " cu arme de " << weaponDamage << " DMG.\n";
     }
 
     void printDetails(std::ostream& os) const override {
-        os << " [TIP: Luptator | DMG: " << weaponDamage << "]";
+        os << " [Luptator | DMG: " << weaponDamage << "]";
     }
 
 public:
     FighterShip(std::string n, double fuel, int x, int y, int dmg)
         : Spaceship(std::move(n), fuel, x, y), weaponDamage(dmg) {}
 
-    std::shared_ptr<Spaceship> clone() const override {
-        return std::make_shared<FighterShip>(*this);
-    }
+    std::shared_ptr<Spaceship> clone() const override { return std::make_shared<FighterShip>(*this); }
 };
 
 // ==========================================
-// AGENTIA SPATIALA (Managerul Flotei)
+// 6. MANAGERUL: SpaceAgency
 // ==========================================
 class SpaceAgency {
 private:
-    // Folosim pointeri inteligenti la clasa de bază
-    std::vector<std::shared_ptr<Spaceship>> fleet;
+    std::vector<std::shared_ptr<Spaceship>> fleet; // Smart Pointers
 
 public:
+    // Variabilă STATICĂ pentru numărul total de misiuni ordonate
+    static int totalMissionsExecuted;
+
     void initializeFleet(const std::string& filename) {
         std::ifstream fin(filename);
-        if (!fin) { std::cerr << "Eroare fisier: " << filename << "\n"; return; }
+        if (!fin) return;
         
-        std::string type, name; 
-        double fuel; 
-        int x, y, extraParam;
-
-        // Citim prima dată TIPUL navei, apoi restul
+        std::string type, name; double fuel; int x, y; double param;
         while (fin >> type >> name >> fuel >> x >> y) {
             if (type == "CargoShip") {
-                fin >> extraParam; // Citim capacitatea
-                fleet.push_back(std::make_shared<CargoShip>(name, fuel, x, y, extraParam));
-            } 
-            else if (type == "ExplorerShip") {
-                // Nu are parametru extra
+                fin >> param;
+                fleet.push_back(std::make_shared<CargoShip>(name, fuel, x, y, param));
+            } else if (type == "ExplorerShip") {
                 fleet.push_back(std::make_shared<ExplorerShip>(name, fuel, x, y));
-            } 
-            else if (type == "FighterShip") {
-                fin >> extraParam; // Citim daunele
-                fleet.push_back(std::make_shared<FighterShip>(name, fuel, x, y, extraParam));
+            } else if (type == "FighterShip") {
+                fin >> param;
+                fleet.push_back(std::make_shared<FighterShip>(name, fuel, x, y, static_cast<int>(param)));
             }
         }
         fin.close();
@@ -225,34 +280,71 @@ public:
         std::ifstream fIn(planetFile);
         if (!fIn) return;
 
-        std::string pName; int pX, pY;
-        while (fIn >> pName >> pX >> pY) {
-            std::cout << "\n--- Misiune catre: " << pName << " (" << pX << ", " << pY << ") ---\n";
+        std::vector<Planet> planets;
+        std::string pName; int pX, pY; double pTons, pPrice;
+        while (fIn >> pName >> pX >> pY >> pTons >> pPrice) {
+            planets.push_back(Planet(pName, pX, pY, pTons, pPrice));
+        }
+        fIn.close();
+
+        for (auto& planet : planets) {
+            std::cout << "\n--- Destinatie: " << planet.getName() << " ---\n";
             for (auto& ship : fleet) {
-                // Polimorfism în acțiune: ship->executeMission() "știe" ce fel de navă este!
-                if (!ship->executeMission(pX, pY)) {
-                    ship->emergencyRefuel(pX, pY);
-                    ship->executeMission(pX, pY);
+                totalMissionsExecuted++;
+                
+                // PRINDEM EXCEPȚIILE (try / catch)
+                try {
+                    ship->executeMission(planet);
+                } 
+                catch (const PlanetDepletedException& e) {
+                    std::cerr << "   " << e.what() << "\n";
+                }
+                catch (const OutOfFuelException& e) {
+                    std::cerr << "   " << e.what() << "\n";
+                }
+                catch (const GalacticException& e) {
+                    std::cerr << "   [Eroare Generala] " << e.what() << "\n";
                 }
             }
         }
-        fIn.close();
+    }
+
+    // UTILIZAREA CU SENS A dynamic_cast
+    void performMaintenance() {
+        std::cout << "\n--- UPGRADE MENTENANTA ---\n";
+        for (auto& ship : fleet) {
+            // Incercam sa gasim doar navele de Lupta pentru a le calibra armele
+            std::shared_ptr<FighterShip> fighter = std::dynamic_pointer_cast<FighterShip>(ship);
+            if (fighter) {
+                std::cout << "[Upgrade Aplicat] Tunuri recalibrate pentru: " << fighter->getName() << "\n";
+            }
+        }
     }
 
     void showStatus() const {
-        std::cout << "\n" << std::string(100, '=') << "\n";
+        std::cout << "\n" << std::string(105, '=') << "\n";
         for (const auto& s : fleet) {
-            // Afișăm obiectul dereferențiind pointerul: *s
-            std::cout << *s << " | Tot.Consumat: " << s->getTotalConsumed() << " kg\n";
+            std::cout << *s << " | Consumat: " << s->getTotalConsumed() << " kg\n";
         }
-        std::cout << std::string(100, '=') << "\n";
+        std::cout << std::string(105, '=') << "\n";
+        std::cout << "Misiuni executate de agentie: " << totalMissionsExecuted << "\n";
     }
 };
+
+int SpaceAgency::totalMissionsExecuted = 0; // Inițializare static
 
 int main() {
     SpaceAgency agency;
     agency.initializeFleet("spaceships.txt");
+    
+    // 1. Rularea simularii cu prinderea exceptiilor
     agency.runGlobalMissionReport("planets.txt");
+    
+    // 2. Apelarea functiei cu downcast
+    agency.performMaintenance();
+    
+    // 3. Raport final
     agency.showStatus();
+    
     return 0;
 }
