@@ -1,7 +1,7 @@
 #ifndef EXCEPTIONS_H
 #define EXCEPTIONS_H
 
-#include <exception>
+#include <exception> 
 #include <string>
 
 class GalacticException : public std::exception {
