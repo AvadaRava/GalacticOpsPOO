@@ -1,5 +1,5 @@
-#include "../include/Spaceship.h"
-#include "../include/Exceptions.h"
+#include "Spaceship.h"
+#include "Exceptions.h"
 #include <cmath>
 #include <algorithm>
 
@@ -57,18 +57,23 @@ int Spaceship::getPower() const { return 0; }
 bool Spaceship::isExplorer() const { return false; }
 void Spaceship::addFuel(double amount) { tank.addFuel(amount); }
 
-void Spaceship::executeMission(Planet& targetPlanet) {
-    double distance = nav.calculateDistanceTo(targetPlanet.getX(), targetPlanet.getY());
+void Spaceship::travelTo(int targetX, int targetY) {
+    double distance = nav.calculateDistanceTo(targetX, targetY);
     double needed = distance * getConsumptionRate(); 
     if (tank.getFuel() < needed) {
         double deficit = needed - tank.getFuel();
-        throw OutOfFuelException(name, targetPlanet.getName(), deficit);
+        std::string dest = "(" + std::to_string(targetX) + "," + std::to_string(targetY) + ")";
+        throw OutOfFuelException(name, dest, deficit);
     }
     tank.consume(needed);
     totalFuelConsumed += needed;
-    nav.setPosition(targetPlanet.getX(), targetPlanet.getY());
+    nav.setPosition(targetX, targetY);
+}
+
+void Spaceship::executeAction(Planet& targetPlanet) {
     performSpecificAction(targetPlanet);
 }
+
 std::ostream& operator<<(std::ostream& os, const Spaceship& s) {
     os << "Nava: " << std::left << std::setw(12) << s.name << " | " << s.nav << " | " << s.tank;
     s.printDetails(os); 
@@ -88,6 +93,8 @@ void CargoShip::performSpecificAction(Planet& targetPlanet) {
         double profit = extracted * targetPlanet.getPricePerTon();
         totalCreditsEarned += profit;
         std::cout << "   [Minerit] " << name << " a extras " << extracted << "t -> Profit local: $" << profit << "\n";
+    } else {
+        std::cout << "   [Minerit] " << name << " are cala plina.\n";
     }
 }
 void CargoShip::printDetails(std::ostream& os) const { os << " [Marfar | Castig Total: $" << totalCreditsEarned << "]"; }
