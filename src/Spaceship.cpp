@@ -25,7 +25,11 @@ std::ostream& operator<<(std::ostream& os, const NavSystem& ns) {
 }
 
 Planet::Planet(std::string n, int px, int py, double tons, double price)
-    : name(std::move(n)), x(px), y(py), availableTons(tons), pricePerTon(price) {}
+    : name(std::move(n)), x(px), y(py), availableTons(tons), pricePerTon(price) {
+    if (pricePerTon < 0) {
+        throw GalacticException("[EROARE DATE] Planeta " + name + " nu poate avea pret negativ la resurse!");
+    }
+}
 const std::string& Planet::getName() const { return name; }
 int Planet::getX() const { return x; }
 int Planet::getY() const { return y; }
