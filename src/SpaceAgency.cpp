@@ -1,13 +1,13 @@
-#include "../include/SpaceAgency.h"
-#include "../include/Exceptions.h"
+#include "SpaceAgency.h"
+#include "Exceptions.h"
 #include <iostream>
 #include <fstream>
 #include <cmath>
 #include <algorithm>
 #include <random>
 
-int SpaceAgency::totalMissionsExecuted = 0; 
 double SpaceAgency::hqVault = 0.0; 
+int SpaceAgency::aliensKilled = 0;
 
 bool SpaceAgency::checkIntersection(int x1, int y1, int x2, int y2, int cx, int cy, int R) {
     double dx = x2 - x1;
@@ -93,102 +93,176 @@ void SpaceAgency::initializeUnknowns(const std::string& filename) {
     }
 }
 
-void SpaceAgency::runGlobalMissionReport() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> coinFlip(0, 1); 
-    std::uniform_int_distribution<> powerDist(1, 1000000); 
-
-    for (auto& planet : planets) {
-        std::cout << "\n--- Destinatie: " << planet.getName() << " ---\n";
-        for (auto it = fleet.begin(); it != fleet.end(); ) {
-            auto ship = *it;
-            int startX = ship->getX();
-            int startY = ship->getY();
-            
-            try {
-                if (ship->isExplorer()) {
-                    for (auto uIt = unknowns.begin(); uIt != unknowns.end(); ) {
-                        if (checkIntersection(startX, startY, planet.getX(), planet.getY(), uIt->x, uIt->y, 1)) {
-                            std::cout << "   [?] " << ship->getName() << " a descoperit anomalia '" << uIt->name << "'!\n";
-                            if (coinFlip(gen) == 1) { 
-                                std::cout << "       -> [JACKPOT] Comoara! +$1.000.000 in seiful HQ.\n";
-                                hqVault += 1000000.0;
-                            } else { 
-                                int alienPwr = powerDist(gen);
-                                std::string newName = "alien" + uIt->name;
-                                std::cout << "       -> [AMBUSCADA] A aparut " << newName << " (Pwr: " << alienPwr << ")!\n";
-                                aliens.push_back({newName, uIt->x, uIt->y, 1, alienPwr, 500000.0});
-                            }
-                            uIt = unknowns.erase(uIt); 
-                        } else { ++uIt; }
-                    }
-                }
-
-                for (auto alienIt = aliens.begin(); alienIt != aliens.end(); ) {
-                    if (checkIntersection(startX, startY, planet.getX(), planet.getY(), alienIt->x, alienIt->y, alienIt->radius)) {
-                        if (ship->getPower() >= alienIt->power) {
-                            std::cout << "   [VICTORIE] " << ship->getName() << " a anihilat " << alienIt->name << "!\n";
-                            if (alienIt->bounty > 0) {
-                                std::cout << "       -> [RECOMPENSA] +$" << alienIt->bounty << " adaugati in seif.\n";
-                                hqVault += alienIt->bounty;
-                            }
-                            alienIt = aliens.erase(alienIt);
-                        } else {
-                            throw ShipDestroyedException(ship->getName(), alienIt->name);
-                        }
-                    } else { ++alienIt; }
-                }
-
-                ship->executeMission(planet);
-                
-                std::shared_ptr<CargoShip> cargo = std::dynamic_pointer_cast<CargoShip>(ship);
-                if (cargo) hqVault += cargo->pullRecentProfit();
-
-                totalMissionsExecuted++;
-                ++it; 
-            } 
-            catch (const ShipDestroyedException& e) {
-                std::cerr << "   " << e.what() << "\n";
-                it = fleet.erase(it); 
-            }
-            catch (const PlanetDepletedException& e) { 
-                std::cerr << "   " << e.what() << "\n"; 
-                ++it; 
-            }
-            catch (const OutOfFuelException& e) { 
-                std::cerr << "   " << e.what() << "\n"; 
-                double cost = e.deficit; 
-                hqVault -= cost; 
-                ship->addFuel(e.deficit); 
-                std::cout << "       -> [CREDIT DE URGENTA] S-au achitat $" << cost << " pt salvarea navei. Sold curent: $" << hqVault << ".\n";
-                try {
-                    ship->executeMission(planet); 
-                    std::shared_ptr<CargoShip> cargo = std::dynamic_pointer_cast<CargoShip>(ship);
-                    if (cargo) hqVault += cargo->pullRecentProfit();
-                    totalMissionsExecuted++;
-                } catch (...) {} 
-                ++it; 
-            }
-            catch (const GalacticException& e) { std::cerr << "   [Eroare] " << e.what() << "\n"; ++it; }
-        }
-    }
+std::shared_ptr<Spaceship> SpaceAgency::findShip(const std::string& name) {
+    for (auto& s : fleet) if (s->getName() == name) return s;
+    return nullptr;
 }
 
-void SpaceAgency::showStatus() const {
-    std::cout << "\n" << std::string(105, '=') << "\n";
-    std::cout << "RAPORT FINAL AL AGENTIEI SPATIALE\n";
-    if (hqVault < 0) {
-        std::cout << "SEIF HQ: [DATORIE] $" << std::fixed << std::setprecision(2) << hqVault << "\n";
-    } else {
-        std::cout << "SEIF HQ: [PROFIT]  $" << std::fixed << std::setprecision(2) << hqVault << "\n";
+Planet* SpaceAgency::findPlanet(const std::string& name) {
+    for (auto& p : planets) if (p.getName() == name) return &p;
+    return nullptr;
+}
+
+std::vector<Alien>::iterator SpaceAgency::findAlien(const std::string& name) {
+    for (auto it = aliens.begin(); it != aliens.end(); ++it) {
+        if (it->name == name) return it;
     }
-    std::cout << std::string(105, '-') << "\n";
-    std::cout << "NAVE ACTIVE IN FLOTA:\n";
-    for (const auto& s : fleet) {
-        std::cout << *s << " | Consumat: " << s->getTotalConsumed() << " kg\n";
+    return aliens.end();
+}
+
+std::vector<UnknownEntity>::iterator SpaceAgency::findUnknown(const std::string& name) {
+    for (auto it = unknowns.begin(); it != unknowns.end(); ++it) {
+        if (it->name == name) return it;
     }
-    std::cout << "\nEXTRATERESTRI RAMASI PE HARTA: " << aliens.size() << "\n";
-    std::cout << "ANOMALII NEDESCOPERITE: " << unknowns.size() << "\n";
-    std::cout << std::string(105, '=') << "\n";
+    return unknowns.end();
+}
+
+void SpaceAgency::printAllData() const {
+    std::cout << "\n=== DATE SISTEM ===\n";
+    std::cout << "[NAVE ACTIUNE]\n";
+    for (const auto& s : fleet) std::cout << "  " << *s << " | Pwr: " << s->getPower() << "\n";
+    
+    std::cout << "\n[PLANETE]\n";
+    for (const auto& p : planets) {
+        std::cout << "  " << std::left << std::setw(10) << p.getName() << " | Poz: (" << p.getX() << ", " << p.getY() << ")"
+                  << " | Resurse: " << p.getAvailableTons() << "t @ $" << p.getPricePerTon() << "/t\n";
+    }
+    
+    std::cout << "\n[EXTRATERESTRI]\n";
+    for (const auto& a : aliens) {
+        std::cout << "  " << std::left << std::setw(10) << a.name << " | Poz: (" << a.x << ", " << a.y << ")"
+                  << " | Pwr: " << a.power << " | Raza: " << a.radius << "\n";
+    }
+    
+    std::cout << "\n[ANOMALII NEDESCOPERITE]\n";
+    for (const auto& u : unknowns) std::cout << "  " << u.name << " la (" << u.x << ", " << u.y << ")\n";
+    std::cout << "===================\n";
+}
+
+bool SpaceAgency::attemptTravel(std::shared_ptr<Spaceship> ship, int destX, int destY) {
+    int startX = ship->getX();
+    int startY = ship->getY();
+
+    // 1. Efectuarea Zborului
+    try {
+        ship->travelTo(destX, destY);
+    } catch (const OutOfFuelException& e) {
+        std::cout << "   " << e.what() << "\n";
+        double cost = e.deficit;
+        hqVault -= cost; // HQ plateste din datorie
+        ship->addFuel(e.deficit);
+        std::cout << "       -> [CREDIT DE URGENTA] S-au achitat $" << cost << " pt salvarea navei. Sold: $" << hqVault << ".\n";
+        ship->travelTo(destX, destY); 
+    }
+
+    // 2. Verificare Coliziuni pe traseu si la destinatie
+    for (auto alienIt = aliens.begin(); alienIt != aliens.end(); ) {
+        if (checkIntersection(startX, startY, destX, destY, alienIt->x, alienIt->y, alienIt->radius)) {
+            std::cout << "   [INTERCEPTARE] " << ship->getName() << " a intrat in raza inamicului " << alienIt->name << "!\n";
+            if (ship->getPower() >= alienIt->power) {
+                std::cout << "   [VICTORIE] " << ship->getName() << " a anihilat " << alienIt->name << "!\n";
+                if (alienIt->bounty > 0) hqVault += alienIt->bounty;
+                aliensKilled++;
+                alienIt = aliens.erase(alienIt); 
+            } else {
+                std::cout << "   [FATAL] Nava " << ship->getName() << " a fost distrusa de " << alienIt->name << "!\n";
+                auto shipIt = std::find(fleet.begin(), fleet.end(), ship);
+                if (shipIt != fleet.end()) fleet.erase(shipIt);
+                return false; 
+            }
+        } else {
+            ++alienIt;
+        }
+    }
+    return true; 
+}
+
+void SpaceAgency::runCLI() {
+    std::cout << "Hello Commander. What would you like to do?\n";
+    std::string cmd;
+    
+    while (true) {
+        std::cout << "\n> ";
+        if (!(std::cin >> cmd)) break; 
+        
+        if (cmd == "end") {
+            std::cout << "Aliens exterminated: " << aliensKilled << "\n";
+            std::cout << "Wealth accumulated: $" << std::fixed << std::setprecision(2) << hqVault << "\n";
+            std::cout << "Goodbye, Commander!\n";
+            break;
+        }
+        else if (cmd == "a") {
+            printAllData();
+        }
+        else if (cmd == "b") {
+            std::string sName; int tx, ty;
+            std::cin >> sName >> tx >> ty;
+            auto ship = findShip(sName);
+            if (!ship) { std::cout << "Nava inexistenta.\n"; continue; }
+            if (attemptTravel(ship, tx, ty)) {
+                std::cout << "   [SUCCES] A ajuns in siguranta la (" << tx << ", " << ty << ").\n";
+            }
+        }
+        else if (cmd == "c") {
+            std::string sName, pName;
+            std::cin >> sName >> pName;
+            auto ship = findShip(sName); auto planet = findPlanet(pName);
+            if (!ship || !planet) { std::cout << "Nava/Planeta invalida.\n"; continue; }
+            
+            if (attemptTravel(ship, planet->getX(), planet->getY())) {
+                try {
+                    ship->executeAction(*planet);
+                    std::shared_ptr<CargoShip> cargo = std::dynamic_pointer_cast<CargoShip>(ship);
+                    if (cargo) hqVault += cargo->pullRecentProfit();
+                } catch(const GalacticException& e) { std::cout << "   " << e.what() << "\n"; }
+            }
+        }
+        else if (cmd == "d") {
+            std::string sName, uName;
+            std::cin >> sName >> uName;
+            auto ship = findShip(sName); auto unk = findUnknown(uName);
+            if (!ship || unk == unknowns.end()) { std::cout << "Nava/Anomalie invalida.\n"; continue; }
+            
+            if (!ship->isExplorer()) { std::cout << "   [EROARE] Doar navele Explorer pot investiga anomaliile!\n"; continue; }
+            
+            if (attemptTravel(ship, unk->x, unk->y)) {
+                std::random_device rd; std::mt19937 gen(rd());
+                std::uniform_int_distribution<> coinFlip(0, 1); 
+                std::uniform_int_distribution<> powerDist(1, 1000000); 
+                
+                std::cout << "   [?] " << ship->getName() << " analizeaza anomalia...\n";
+                if (coinFlip(gen) == 1) { 
+                    std::cout << "       -> [JACKPOT] Comoara gasita! +$1.000.000\n";
+                    hqVault += 1000000.0;
+                } else { 
+                    int alienPwr = powerDist(gen);
+                    std::string newName = "alien" + unk->name;
+                    std::cout << "       -> [AMBUSCADA] A aparut inamicul: " << newName << " (Pwr: " << alienPwr << ")\n";
+                    aliens.push_back({newName, unk->x, unk->y, 1, alienPwr, 500000.0});
+                }
+                unknowns.erase(unk); 
+            }
+        }
+        else if (cmd == "e") {
+            std::string sName, aName;
+            std::cin >> sName >> aName;
+            auto ship = findShip(sName); auto aln = findAlien(aName);
+            if (!ship || aln == aliens.end()) { std::cout << "Nava/Inamic invalid.\n"; continue; }
+            
+            int tx = aln->x; int ty = aln->y;
+            if (attemptTravel(ship, tx, ty)) {
+                std::cout << "   [SECURIZAT] Locatia a fost eliberata.\n";
+            }
+        }
+        else if (cmd == "f") {
+            std::cout << "Wealth accumulated: $" << std::fixed << std::setprecision(2) << hqVault << "\n";
+        }
+        else if (cmd == "g") {
+            std::cout << "Aliens exterminated: " << aliensKilled << "\n";
+        }
+        else {
+            std::cout << "Comanda invalida.\n";
+            std::cin.clear(); std::cin.ignore(10000, '\n'); // Curatam linia in caz de eroare de input
+        }
+    }
 }
