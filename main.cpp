@@ -233,15 +233,13 @@ private:
     std::vector<std::shared_ptr<Spaceship>> fleet;
     std::vector<Alien> aliens; // Lista inamicilor de pe hartă
 
-    // Funcție matematică: Verifică dacă segmentul (x1,y1)->(x2,y2) intersectează cercul (cx,cy) cu raza R
-    bool checkIntersection(int x1, int y1, int x2, int y2, int cx, int cy, int R) {
+    static bool checkIntersection(int x1, int y1, int x2, int y2, int cx, int cy, int R) {
         double dx = x2 - x1;
         double dy = y2 - y1;
         double lengthSquared = dx * dx + dy * dy;
 
         if (lengthSquared == 0.0) return (std::pow(cx - x1, 2) + std::pow(cy - y1, 2) <= R * R);
 
-        // Proiectăm centrul cercului pe linia dreaptă a zborului
         double t = ((cx - x1) * dx + (cy - y1) * dy) / lengthSquared;
         t = std::max(0.0, std::min(1.0, t)); // Restrângem pe segmentul [0, 1]
 
