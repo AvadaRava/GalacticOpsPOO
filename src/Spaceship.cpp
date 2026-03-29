@@ -2,7 +2,7 @@
 #include "Exceptions.h"
 #include <cmath>
 #include <algorithm>
-
+ 
 FuelTank::FuelTank(double fuel) : currentFuel(fuel) {}
 double FuelTank::getFuel() const { return currentFuel; }
 void FuelTank::consume(double amount) { currentFuel -= amount; }
