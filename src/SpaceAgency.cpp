@@ -45,8 +45,14 @@ void SpaceAgency::initializeFleet(const std::string& filename) {
             fin >> param; fleet.push_back(std::make_shared<CargoShip>(name, fuel, x, y, param));
         } else if (type == "ExplorerShip") {
             fleet.push_back(std::make_shared<ExplorerShip>(name, fuel, x, y));
-        } else if (type == "FighterShip") {
-            fin >> param; fleet.push_back(std::make_shared<FighterShip>(name, fuel, x, y, static_cast<int>(param)));
+       } else if (type == "FighterShip") {
+            fin >> param; 
+            fleet.push_back(std::make_shared<FighterShip>(name, fuel, x, y, static_cast<int>(param)));
+        } 
+        //COMMIT UL SEPARAT
+         else if (type == "ColonyShip") {
+            fin >> param; // Parametrul extra reprezinta numarul de colonisti
+            fleet.push_back(std::make_shared<ColonyShip>(name, fuel, x, y, static_cast<int>(param)));
         }
     }
 }
