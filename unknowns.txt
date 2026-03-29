@@ -1,0 +1,3 @@
+AlphaAnomaly 50 50
+BetaSignal 300 -100
+GammaRift -200 200
