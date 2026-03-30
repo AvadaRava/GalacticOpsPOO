@@ -5,7 +5,7 @@
 int main() {
     try {
         SpaceAgency agency;
-        
+         
         agency.initializePlanets("planets.txt");
         agency.initializeFleet("spaceships.txt");
         agency.initializeAliens("aliens.txt");
