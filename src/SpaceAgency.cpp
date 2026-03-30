@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <random>
 #include <iomanip>
-
+ 
 double SpaceAgency::hqVault = 0.0; 
 int SpaceAgency::aliensKilled = 0;
 
